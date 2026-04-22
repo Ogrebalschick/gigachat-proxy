@@ -381,7 +381,41 @@ app.post('/api/memory', authenticate, async (req, res) => {
         res.status(500).json({ error: 'Failed to update memory' });
     }
 });
-
+// Публичный эндпоинт для чата (без авторизации)
+app.post('/chat', async (req, res) => {
+    const { message } = req.body;
+    
+    if (!message) {
+        return res.status(400).json({ error: 'Message required' });
+    }
+    
+    try {
+        const token = await getGigaToken();
+        
+        const response = await axios.post(
+            'https://gigachat.devices.sberbank.ru/api/v1/chat/completions',
+            {
+                model: "GigaChat",
+                messages: [{ role: "user", content: message }],
+                temperature: 0.7,
+                max_tokens: 500
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                httpsAgent: agent
+            }
+        );
+        
+        const reply = response.data.choices?.[0]?.message?.content || "Нет ответа";
+        res.json({ success: true, reply });
+    } catch (error) {
+        console.error('Chat error:', error.message);
+        res.status(500).json({ error: 'Chat failed' });
+    }
+});
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Server running on port ${PORT}`);
 });
