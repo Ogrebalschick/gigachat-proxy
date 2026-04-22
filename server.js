@@ -357,6 +357,31 @@ app.get('/health', (req, res) => {
 
 // 7. Запуск сервера
 const PORT = process.env.PORT || 3000;
+
+// 7. Обновление памяти пользователя (ДОБАВИТЬ ЭТОТ ЭНДПОИНТ)
+app.post('/api/memory', authenticate, async (req, res) => {
+    const { memory } = req.body;
+    const userId = req.userId;
+    
+    try {
+        // Очищаем старую память
+        await pool.query('DELETE FROM user_memory WHERE user_id = $1', [userId]);
+        
+        // Сохраняем новую
+        for (const mem of memory) {
+            await pool.query(
+                'INSERT INTO user_memory (user_id, content, timestamp) VALUES ($1, $2, $3)',
+                [userId, mem.text, mem.timestamp]
+            );
+        }
+        
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Memory update error:', error);
+        res.status(500).json({ error: 'Failed to update memory' });
+    }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Server running on port ${PORT}`);
 });
